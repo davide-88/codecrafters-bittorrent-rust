@@ -4,7 +4,6 @@ fn decode_integer(chars: &str) -> serde_json::Value {
   let end = chars.find(|c| c == 'e')
         .unwrap_or_else(|| panic!("Failed to find end of integer"));
   let raw_int = &chars[1..end];
-  println!("raw_int: {}", raw_int);
   serde_json::Value::Number(
     serde_json::Number::from_i128(
       raw_int.parse().expect("Failed to parse integer")
