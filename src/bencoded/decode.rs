@@ -1,6 +1,10 @@
 use std::str::FromStr;
 
-fn decode_integer(raw_int: &str) -> serde_json::Value {
+fn decode_integer(chars: &str) -> serde_json::Value {
+  let end = chars.find(|c| c == 'e')
+        .unwrap_or_else(|| panic!("Failed to find end of integer"));
+  let raw_int = &chars[1..end];
+  println!("raw_int: {}", raw_int);
   serde_json::Value::Number(
     serde_json::Number::from_i128(
       raw_int.parse().expect("Failed to parse integer")
@@ -22,10 +26,7 @@ pub fn decode_bencoded_value(encoded_value: &str) -> serde_json::Value {
   let mut chars = encoded_value.chars();
   match chars.nth(0) {
     Some('i') => {
-      let end = chars.into_iter()
-        .position(|c| c == 'e')
-        .unwrap_or_else(|| panic!("Failed to find end of integer"));
-      decode_integer(&encoded_value[1..=end])
+      decode_integer(encoded_value)
     },
     Some('0'..='9') => decode_string(encoded_value),
     None => serde_json::Value::Null,
