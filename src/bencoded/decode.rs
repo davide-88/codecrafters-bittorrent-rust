@@ -108,4 +108,19 @@ mod tests {
             ])
         );
     }
+
+    #[test]
+    fn parse_nested_list() {
+        let result = decode_bencoded_value(&"l5:helloli52e3:treee");
+        assert_eq!(
+            result,
+            serde_json::Value::Array(vec![
+                serde_json::Value::String(String::from("hello")),
+                serde_json::Value::Array(vec![
+                    serde_json::Value::Number(serde_json::Number::from(52)),
+                    serde_json::Value::String(String::from("tre"))
+                ]),
+            ])
+        );
+    }
 }
