@@ -155,19 +155,38 @@ mod tests {
 
     #[test]
     fn parse_dictionary() {
-        let result = decode_bencoded_value(&"d3:foo3:bar5:helloi52ee");
-        assert_eq!(
-            result,
-            serde_json::Value::Object(serde_json::Map::from_iter(vec![
-                (
-                    String::from("foo"),
-                    serde_json::Value::String(String::from("bar"))
-                ),
-                (
-                    String::from("hello"),
-                    serde_json::Value::Number(serde_json::Number::from(52))
-                )
-            ]))
-        );
+        let test_cases = vec![
+            (
+                "d3:foo3:bar5:helloi52ee",
+                serde_json::Value::Object(serde_json::Map::from_iter(vec![
+                    (
+                        String::from("foo"),
+                        serde_json::Value::String(String::from("bar")),
+                    ),
+                    (
+                        String::from("hello"),
+                        serde_json::Value::Number(serde_json::Number::from(52)),
+                    ),
+                ])),
+            ),
+            (
+                "d3:barli25el3:fooi-43ee5:helloee",
+                serde_json::Value::Object(serde_json::Map::from_iter(vec![(
+                    String::from("bar"),
+                    serde_json::Value::Array(vec![
+                        serde_json::Value::Number(serde_json::Number::from(25)),
+                        serde_json::Value::Array(vec![
+                            serde_json::Value::String(String::from("foo")),
+                            serde_json::Value::Number(serde_json::Number::from(-43)),
+                        ]),
+                        serde_json::Value::String(String::from("hello")),
+                    ]),
+                )])),
+            ),
+        ];
+        test_cases.iter().for_each(|(input, expected)| {
+            let result = decode_bencoded_value(input);
+            assert_eq!(result, *expected);
+        });
     }
 }
