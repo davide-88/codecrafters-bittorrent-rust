@@ -61,12 +61,41 @@ fn decode_list(chars: &str) -> (serde_json::Value, Option<&str>) {
     )
 }
 
+fn decode_map(chars: &str) -> (serde_json::Value, Option<&str>) {
+    let mut map = serde_json::Map::new();
+    let mut remainder: Option<&str> = chars
+        .split_once('d')
+        .and_then(|(_, next_chars)| Some(next_chars))
+        .filter(|next_chars| next_chars.len() > 0);
+    while let Some(next_chars) = remainder.filter(|rem| !rem.starts_with('e')) {
+        let (key, rest) = decode_string(next_chars);
+        let (value, rest) = rest
+            .map(|rest| decode_bencoded_value_and_remainder(rest))
+            .unwrap_or((serde_json::Value::Null, None));
+        remainder = rest;
+        match key {
+            serde_json::Value::String(key) => {
+                map.insert(key, value);
+            }
+            _ => panic!("{}", format!("Map key ({key}) is not a string")),
+        }
+    }
+    (
+        serde_json::Value::Object(map),
+        remainder
+            .and_then(|rem| rem.split_once('e'))
+            .and_then(|(_, rem)| Some(rem))
+            .filter(|rem| rem.len() > 0),
+    )
+}
+
 fn decode_bencoded_value_and_remainder(encoded_value: &str) -> (serde_json::Value, Option<&str>) {
     let mut chars = encoded_value.chars();
     match chars.nth(0) {
         Some('i') => decode_integer(encoded_value),
         Some('0'..='9') => decode_string(encoded_value),
         Some('l') => decode_list(encoded_value),
+        Some('d') => decode_map(encoded_value),
         None => (serde_json::Value::Null, None),
         _ => panic!("Unhandled encoded value: {}", encoded_value),
     }
@@ -121,6 +150,24 @@ mod tests {
                     serde_json::Value::String(String::from("tre"))
                 ]),
             ])
+        );
+    }
+
+    #[test]
+    fn parse_dictionary() {
+        let result = decode_bencoded_value(&"d3:foo3:bar5:helloi52ee");
+        assert_eq!(
+            result,
+            serde_json::Value::Object(serde_json::Map::from_iter(vec![
+                (
+                    String::from("foo"),
+                    serde_json::Value::String(String::from("bar"))
+                ),
+                (
+                    String::from("hello"),
+                    serde_json::Value::Number(serde_json::Number::from(52))
+                )
+            ]))
         );
     }
 }
