@@ -1,6 +1,7 @@
-use serde::Deserialize;
+use serde::de::Visitor;
+use serde::{Deserialize, Deserializer};
 use serde_bencode::from_bytes;
-use serde_bytes::ByteBuf;
+use std::fmt;
 use std::result::Result;
 
 #[derive(Debug)]
@@ -9,39 +10,71 @@ pub enum DecodeTorrentFileError {
     SerdeError(serde_bencode::Error),
 }
 
-/**
-* A torrent file (also known as metainfo file) cotains a bencoded dictoruary with the
-* following keys and values:
-* - announce: the URL of the tracker, which is a central server that keeps track
-*   of peers partecipating int the sharing of a torrent.
-* - info: a dictionary with the following keys and values:
-*   - length: the size of the file in bytes, for single-file torrents.
-*   - name: suggested name to save the file/directory as
-*   - piece length: the number of bytes in each piece
-*   - pieces: concatenated SHA-1 hashes of each piece
-*
-* Note: .torrent files contain bytes that aren't valid UTF-8 characters.
-* You'll run into probles if you try to read the file as a string. Use &[u8] or Vec<u8> instead.
-*
-* Note: The info dictionary looks slightly different for multi-file torrents.
-* For this challange, we'll only implement support for single-file torrents.
-*
-* In this stage, we'll focus on extracting the tracker URL and the lenght of the file (in bytes).
-*/
+#[derive(Debug, Clone)]
+pub struct Hashes(Vec<[u8; 20]>);
+struct HashStrVistitor;
+
+impl<'de> Visitor<'de> for HashStrVistitor {
+    type Value = Hashes;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a byte string whose length is a multiple of 20")
+    }
+
+    fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        if v.len() % 20 != 0 {
+            return Err(E::custom(format!(
+                "byte string length is not a multiple of 20: {}",
+                v.len()
+            )));
+        }
+
+        Ok(Hashes(
+            v.chunks_exact(20)
+                .map(|chunk| chunk.try_into().expect("guaranteed to be of size 20"))
+                .collect(),
+        ))
+    }
+}
+
+impl<'de> Deserialize<'de> for Hashes {
+    fn deserialize<D>(deserializer: D) -> Result<Hashes, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_bytes(HashStrVistitor)
+    }
+}
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Torrent {
+    // The URL of the tracker, which is a central server that keeps track
+    // of peers partecipating int the sharing of a torrent.
     pub announce: String,
+    // A dictionary that describes the file(s) of the torrent.
+    // There are two possible forms:
+    // one for the case of a 'single-file' torrent with no directory structure,
+    // one for the case of a 'multi-file' torrent
     pub info: Info,
+    // The string encoding format used to generate the pieces part of the info dictionary
+    pub encoding: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Info {
-    pub length: u64,
+    // In the single file case this is the suggested name to save the file as.
+    // In the multiple file case, it's the name of the directory to save the files in.
     pub name: String,
+
+    //The size of the file in bytes, for single-file torrents.
+    pub length: usize,
+
     #[serde(rename = "piece length")]
     pub piece_length: u64,
-    pub pieces: ByteBuf,
+    pub pieces: Hashes,
 }
 
 pub fn decode_torrent_file(path_to_torrent_file: &str) -> Result<Torrent, DecodeTorrentFileError> {
@@ -52,89 +85,3 @@ pub fn decode_torrent_file(path_to_torrent_file: &str) -> Result<Torrent, Decode
                 .map_err(|e| DecodeTorrentFileError::SerdeError(e))
         })
 }
-
-/*
-#[cfg(test)]
-mod tests {
-    use super::decode_bencoded_value;
-
-    #[test]
-    fn parse_string() {
-        let result = decode_bencoded_value(&"5:hello");
-        assert_eq!(result, serde_json::Value::String(String::from("hello")));
-    }
-
-    #[test]
-    fn parse_integer() {
-        let result = decode_bencoded_value(&"i52e");
-        assert_eq!(
-            result,
-            serde_json::Value::Number(serde_json::Number::from(52))
-        );
-    }
-
-    #[test]
-    fn parse_list() {
-        let result = decode_bencoded_value(&"l5:helloi52ee");
-        assert_eq!(
-            result,
-            serde_json::Value::Array(vec![
-                serde_json::Value::String(String::from("hello")),
-                serde_json::Value::Number(serde_json::Number::from(52))
-            ])
-        );
-    }
-
-    #[test]
-    fn parse_nested_list() {
-        let result = decode_bencoded_value(&"l5:helloli52e3:treee");
-        assert_eq!(
-            result,
-            serde_json::Value::Array(vec![
-                serde_json::Value::String(String::from("hello")),
-                serde_json::Value::Array(vec![
-                    serde_json::Value::Number(serde_json::Number::from(52)),
-                    serde_json::Value::String(String::from("tre"))
-                ]),
-            ])
-        );
-    }
-
-    #[test]
-    fn parse_dictionary() {
-        let test_cases = vec![
-            (
-                "d3:foo3:bar5:helloi52ee",
-                serde_json::Value::Object(serde_json::Map::from_iter(vec![
-                    (
-                        String::from("foo"),
-                        serde_json::Value::String(String::from("bar")),
-                    ),
-                    (
-                        String::from("hello"),
-                        serde_json::Value::Number(serde_json::Number::from(52)),
-                    ),
-                ])),
-            ),
-            (
-                "d3:barli25el3:fooi-43ee5:helloee",
-                serde_json::Value::Object(serde_json::Map::from_iter(vec![(
-                    String::from("bar"),
-                    serde_json::Value::Array(vec![
-                        serde_json::Value::Number(serde_json::Number::from(25)),
-                        serde_json::Value::Array(vec![
-                            serde_json::Value::String(String::from("foo")),
-                            serde_json::Value::Number(serde_json::Number::from(-43)),
-                        ]),
-                        serde_json::Value::String(String::from("hello")),
-                    ]),
-                )])),
-            ),
-        ];
-        test_cases.iter().for_each(|(input, expected)| {
-            let result = decode_bencoded_value(input);
-            assert_eq!(result, *expected);
-        });
-    }
-}
-*/
