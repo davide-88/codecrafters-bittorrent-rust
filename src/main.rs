@@ -1,7 +1,6 @@
 mod bencoded;
 
 use bencoded::{decode::decode_bencoded_value, decode_torrent_file::decode_torrent_file};
-use serde_json;
 use std::{env, fmt::format};
 
 // Available if you need it!
@@ -20,10 +19,24 @@ fn main() {
     } else if command == "info" {
         let torrent = decode_torrent_file(&args[2]).unwrap();
         println!("{}", format!("Tracker URL: {}", &torrent.announce));
+        match &torrent.info.keys {
+            bencoded::decode_torrent_file::Keys::SingleFile { length, md5sum } => {
+                println!("{}", format!("Lenght: {}", &length));
+            }
+            bencoded::decode_torrent_file::Keys::MultiFiles { files } => {
+                let mut lenght = 0;
+                for file in files {
+                    lenght += file.length;
+                }
+                println!("{}", format!("Lenght: {:?}", lenght));
+            }
+        }
+        /*
         println!("{}", format!("Encoding: {:?}", &torrent.encoding));
-        println!("{}", format!("Length: {}", &torrent.info.length));
+        println!("{}", format!("keys: {:?}", &torrent.info.keys));
         println!("{}", format!("Name: {}", &torrent.info.name));
         println!("{}", format!("Pieces: {:?}", &torrent.info.pieces));
+        */
     } else {
         println!("unknown command: {}", args[1])
     }
