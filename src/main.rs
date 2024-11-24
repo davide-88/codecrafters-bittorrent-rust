@@ -1,8 +1,8 @@
 mod bencoded;
 
+use bencoded::{decode::decode_bencoded_value, decode_torrent_file::decode_torrent_file};
 use serde_json;
 use std::env;
-use bencoded::decode::decode_bencoded_value;
 
 // Available if you need it!
 // use serde_bencode
@@ -17,6 +17,10 @@ fn main() {
         let encoded_value = &args[2];
         let decoded_value = decode_bencoded_value(encoded_value);
         println!("{}", decoded_value.to_string());
+    } else if command == "info" {
+        let torrent = decode_torrent_file(&args[2]).unwrap();
+        println!("{}", format!("Tracker URL: {}", &torrent.announce));
+        println!("{}", format!("Length: {}", &torrent.info.length));
     } else {
         println!("unknown command: {}", args[1])
     }
