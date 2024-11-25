@@ -2,9 +2,11 @@ use serde::de::Visitor;
 use serde::{Deserialize, Deserializer};
 use serde_bencode::from_bytes;
 use std::fmt;
+use std::path::PathBuf;
 use std::result::Result;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum DecodeTorrentFileError {
     IoError(std::io::Error),
     SerdeError(serde_bencode::Error),
@@ -109,7 +111,9 @@ pub struct File {
     pub md5sum: Option<String>,
 }
 
-pub fn decode_torrent_file(path_to_torrent_file: &str) -> Result<Torrent, DecodeTorrentFileError> {
+pub fn decode_torrent_file(
+    path_to_torrent_file: &PathBuf,
+) -> Result<Torrent, DecodeTorrentFileError> {
     std::fs::read(path_to_torrent_file)
         .map_err(|e| DecodeTorrentFileError::IoError(e))
         .and_then(|torrent_content| {
