@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
+use hex::encode;
 use serde::de::Visitor;
-use serde::{Deserialize, Deserializer};
-use serde_bencode::from_bytes;
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_bencode::{from_bytes, to_bytes};
+use sha1::{Digest, Sha1};
 use std::fmt;
 use std::path::PathBuf;
 
@@ -45,7 +47,16 @@ impl<'de> Deserialize<'de> for Hashes {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+impl Serialize for Hashes {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_bytes(&self.0.concat())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct Torrent {
     // The URL of the tracker, which is a central server that keeps track
@@ -60,7 +71,7 @@ pub struct Torrent {
     pub encoding: Option<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct Info {
     // In the single file case this is the suggested name to save the file as.
@@ -78,7 +89,7 @@ pub struct Info {
     pub keys: Keys,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum Keys {
     SingleFile {
@@ -94,7 +105,7 @@ pub enum Keys {
     },
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub struct File {
     // The length of the file in bytes
@@ -111,4 +122,14 @@ pub struct File {
 pub fn decode_torrent_file(path_to_torrent_file: &PathBuf) -> Result<Torrent> {
     let torrent_content = std::fs::read(path_to_torrent_file).context("read torrent file")?;
     from_bytes::<Torrent>(&torrent_content).context("decode torrent file")
+}
+
+pub fn info_sha1_hash(info: &Info) -> Result<String> {
+    to_bytes(info)
+        .context("encode info section torrent file")
+        .map(|bytes| {
+            let mut sha1 = Sha1::new();
+            sha1.update(bytes);
+            encode(sha1.finalize())
+        })
 }

@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 use super::executor::Executor;
-use crate::bencoded::decode_torrent_file::decode_torrent_file;
+use crate::bencoded::decode_torrent_file::{decode_torrent_file, info_sha1_hash};
 
 pub struct InfoExecutor<'a> {
     torrent_path: &'a PathBuf,
@@ -31,6 +31,7 @@ impl<'a> Executor for InfoExecutor<'a> {
                 println!("{}", format!("Lenght: {:?}", lenght));
             }
         }
+        println!("Info Hash: {:?}", &info_sha1_hash(&torrent.info)?);
         Ok(())
     }
 }
