@@ -1,18 +1,12 @@
+use anyhow::{Context, Result};
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer};
 use serde_bencode::from_bytes;
 use std::fmt;
 use std::path::PathBuf;
-use std::result::Result;
-
-#[derive(Debug)]
-#[allow(dead_code)]
-pub enum DecodeTorrentFileError {
-    IoError(std::io::Error),
-    SerdeError(serde_bencode::Error),
-}
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Hashes(Vec<[u8; 20]>);
 struct HashStrVistitor;
 
@@ -43,7 +37,7 @@ impl<'de> Visitor<'de> for HashStrVistitor {
 }
 
 impl<'de> Deserialize<'de> for Hashes {
-    fn deserialize<D>(deserializer: D) -> Result<Hashes, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -52,6 +46,7 @@ impl<'de> Deserialize<'de> for Hashes {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct Torrent {
     // The URL of the tracker, which is a central server that keeps track
     // of peers partecipating int the sharing of a torrent.
@@ -66,6 +61,7 @@ pub struct Torrent {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct Info {
     // In the single file case this is the suggested name to save the file as.
     // In the multiple file case, it's the name of the directory to save the files in.
@@ -99,6 +95,7 @@ pub enum Keys {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct File {
     // The length of the file in bytes
     pub length: usize,
@@ -111,13 +108,7 @@ pub struct File {
     pub md5sum: Option<String>,
 }
 
-pub fn decode_torrent_file(
-    path_to_torrent_file: &PathBuf,
-) -> Result<Torrent, DecodeTorrentFileError> {
-    std::fs::read(path_to_torrent_file)
-        .map_err(|e| DecodeTorrentFileError::IoError(e))
-        .and_then(|torrent_content| {
-            from_bytes::<Torrent>(&torrent_content)
-                .map_err(|e| DecodeTorrentFileError::SerdeError(e))
-        })
+pub fn decode_torrent_file(path_to_torrent_file: &PathBuf) -> Result<Torrent> {
+    let torrent_content = std::fs::read(path_to_torrent_file).context("read torrent file")?;
+    from_bytes::<Torrent>(&torrent_content).context("decode torrent file")
 }

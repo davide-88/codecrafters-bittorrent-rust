@@ -1,9 +1,10 @@
 mod bencoded;
 mod executors;
 
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use clap::{Parser, Subcommand};
 use executors::executor_factory;
 
 #[derive(Parser)]
@@ -27,11 +28,12 @@ enum Commands {
 }
 
 // Usage: your_bittorrent.sh decode "<encoded_value>"
-fn main() {
+fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let command = &cli.command.expect("Could not find command");
+    let command = cli.command.context("No command provided")?;
     executor_factory::ExecutorFactory::new()
-        .create(command)
-        .execute();
+        .create(&command)
+        .execute()?;
+    Ok(())
 }

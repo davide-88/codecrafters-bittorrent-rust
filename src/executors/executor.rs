@@ -1,3 +1,5 @@
+use anyhow::Result;
+
 pub trait Executor {
-    fn execute(&self);
+    fn execute(&self) -> Result<()>;
 }

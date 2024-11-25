@@ -1,3 +1,5 @@
+use anyhow::{Ok, Result};
+
 use super::executor::Executor;
 use crate::bencoded::decode::decode_bencoded_value;
 
@@ -12,8 +14,9 @@ impl<'a> DecodeExecutor<'a> {
 }
 
 impl<'a> Executor for DecodeExecutor<'a> {
-    fn execute(&self) {
+    fn execute(&self) -> Result<()> {
         let decoded_value = decode_bencoded_value(&self.value);
         println!("{}", decoded_value.to_string());
+        Ok(())
     }
 }
