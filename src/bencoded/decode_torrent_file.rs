@@ -9,7 +9,7 @@ use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct Hashes(Vec<[u8; 20]>);
+pub struct Hashes(pub Vec<[u8; 20]>);
 struct HashStrVistitor;
 
 impl<'de> Visitor<'de> for HashStrVistitor {

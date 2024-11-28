@@ -32,6 +32,15 @@ impl<'a> Executor for InfoExecutor<'a> {
             }
         }
         println!("Info Hash: {:?}", &info_sha1_hash(&torrent.info)?);
+        println!("Piece Length: {:?}", &torrent.info.piece_length);
+        println!("Piece Hashes:");
+        torrent
+            .info
+            .pieces
+            .0
+            .iter()
+            .map(|x| hex::encode(x))
+            .for_each(|x| println!("{}", x));
         Ok(())
     }
 }
