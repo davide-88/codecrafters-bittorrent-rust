@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 use super::executor::Executor;
-use crate::bencoded::decode_torrent_file::{decode_torrent_file, info_sha1_hash};
+use crate::bittorrent::bencoded::decode_torrent_file::{decode_torrent_file, info_sha1_hash, Keys};
 
 pub struct InfoExecutor<'a> {
     torrent_path: &'a PathBuf,
@@ -20,10 +20,10 @@ impl<'a> Executor for InfoExecutor<'a> {
         let torrent = decode_torrent_file(&self.torrent_path)?;
         println!("{}", format!("Tracker URL: {}", &torrent.announce));
         match &torrent.info.keys {
-            crate::bencoded::decode_torrent_file::Keys::SingleFile { length, md5sum } => {
+            Keys::SingleFile { length, md5sum } => {
                 println!("{}", format!("Lenght: {}", &length));
             }
-            crate::bencoded::decode_torrent_file::Keys::MultiFiles { files } => {
+            Keys::MultiFiles { files } => {
                 let mut lenght = 0;
                 for file in files {
                     lenght += file.length;

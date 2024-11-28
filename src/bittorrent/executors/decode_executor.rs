@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 
 use super::executor::Executor;
-use crate::bencoded::decode::decode_bencoded_value;
+use crate::bittorrent::bencoded::decode::decode_bencoded_value;
 
 pub struct DecodeExecutor<'a> {
     value: &'a String,

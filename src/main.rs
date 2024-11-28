@@ -1,11 +1,10 @@
-mod bencoded;
-mod executors;
+mod bittorrent;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-use executors::executor_factory;
+use bittorrent::executors::executor_factory;
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -28,7 +27,7 @@ enum Commands {
 }
 
 /**
-Piece hases
+Piece hashes
 
 In a torrent, a file is split into equally-sized parts called pieces.
 A piece is usially 256KB or 1MB in size.
@@ -57,6 +56,42 @@ Lenght: 92063
 Info Hash: d69f91e6b2ae4c542468d1073a71d4ea13879a7f
 Piece Length:
 Piece Hashes:
+*/
+
+/**
+    Discover peers
+
+    Trackers are centra serveres that maintain information abut peers
+    participating in the sharing and dowloading of a torrent.
+
+    In this stage, you'll make a GET request to a HTTP tracker to discover
+    peers to download the file from.
+
+    Tracker GET request
+
+    You will need t make a request to the tracker URL you extracted in the
+    previous stage.
+
+    - info_hash: the info has of the torrent
+        * 20 byte long, will need to be URL encoded
+        * Note: this is NOT the hexadecimal representation, which is 40 characters long
+    - peer_id: a unique identifier for yout client
+        * A string of thenght 20 that you get to pick. You can use something like
+          "00112233445566778899".
+    - port: the port your client is listening on
+        * You can set this to 6881 you will not have to support this functionality
+          during this challange
+    - uploaded: the total amount uploaded so far
+        * Since your client hasn't downloaded anything yet you can set this to 0.
+    - left: the numebr of butes left to download
+        * Since your client hasn't downloaded anything yet, this'll be the total
+          length of the file (you have extracted this value from the torrent file
+          in the previous stage)
+    - compact: whether the peer list shoudl use the compact represetation
+        * You can set this to 1
+        * the compact representation is more commonly used in the wild, the non-compact
+          representation is mostly supported for backward-compatability
+
 */
 
 // Usage: your_bittorrent.sh decode "<encoded_value>"
